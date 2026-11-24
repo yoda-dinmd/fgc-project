@@ -1,8 +1,98 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Last Light</title><link rel="stylesheet" href="style.css"><script defer src="story.js"></script><script defer src="locales.js"></script><script defer src="game.js"></script></head>
-<body><header><a href="./" data-i18n="brand">THE LAST LIGHT</a><span data-i18n="subtitle"></span><div class="headerActions"><select class="language" data-label="language" aria-label="Language"><option value="en">English</option><option value="ru">Русский</option><option value="ro">Română</option></select><button id="journalBtn"><span data-i18n="journal"></span> <span id="count">0/8</span></button></div></header>
-<main><section class="intro"><div><p class="eyebrow" data-i18n="eyebrow"></p><h1 data-i18n="heading"></h1></div><div class="introCopy"><p data-i18n="summary"></p><button id="storyBtn" data-i18n="replay"></button></div></section>
-<section class="game" data-label="mapLabel"><div class="mapbar"><span><span data-i18n="town"></span> <small data-i18n="night"></small></span><span id="progress"></span></div><canvas id="world" width="960" height="480" tabindex="0" data-label="mapLabel"></canvas><div class="mapfoot"><span><kbd>WASD</kbd> / <kbd>↑ ↓ ← →</kbd> <span data-i18n="move"></span> &nbsp; <kbd>E</kbd> <span data-i18n="talk"></span></span><button id="beacon" data-i18n="visit"></button></div></section>
-<section class="people" data-label="peopleLabel"></section><footer><span data-i18n="footer"></span><span data-i18n="vote"></span></footer></main>
-<dialog id="dialog" aria-labelledby="dialogTitle"><div class="dialogTop"><span id="speaker"></span><select class="language" data-label="language" aria-label="Language"><option value="en">English</option><option value="ru">Русский</option><option value="ro">Română</option></select><button id="close" data-label="close" aria-label="Close dialog">✕</button></div><div id="body"></div></dialog>
-</body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Examined Life</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<link rel="stylesheet" href="style.css">
+<script defer src="data.js"></script>
+<script defer src="scoring.js"></script>
+<script defer src="sprites.js"></script>
+<script defer src="game.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <h1>THE EXAMINED LIFE</h1>
+    <p>a tiny philosophical adventure · about 20–30 minutes</p>
+  </header>
+
+  <section class="frame" aria-label="Game">
+    <div class="hud">
+      <span id="zoneName">Village Square</span>
+      <span class="hudr"><span id="thoughts">✧ 0 thoughts</span><button id="mapBtn" type="button">Map <kbd>M</kbd></button><button id="journalBtn" type="button">Journal <kbd>Q</kbd></button></span>
+    </div>
+    <div class="screen">
+      <canvas id="world" width="384" height="240" tabindex="0" aria-label="Game world. Use arrow keys to walk and Z to talk."></canvas>
+
+      <div id="dialog" class="dialog" hidden role="dialog" aria-live="polite">
+        <canvas id="portrait" width="32" height="32" aria-hidden="true"></canvas>
+        <div class="dmain">
+          <p id="dname" class="dname"></p>
+          <p id="dtext" class="dtext"></p>
+          <div id="dopts" class="dopts" hidden></div>
+        </div>
+        <span id="dmore" class="dmore" aria-hidden="true" hidden>▼</span>
+      </div>
+
+      <div id="toasts" class="toasts" aria-live="polite"></div>
+
+      <div id="title" class="title" hidden>
+        <div class="tcard">
+          <p class="eyebrow">A PHILOSOPHY GAME</p>
+          <h2>The Examined Life</h2>
+          <p>Wake up in a strange little town. Talk to its people. Find out what you actually believe.</p>
+          <div class="tbtns"><button id="newBtn" class="btn primary" type="button">New game</button><button id="continueBtn" class="btn" type="button" hidden>Continue</button></div>
+          <p class="small">“The unexamined life is not worth living.” (Socrates, allegedly, before his barrel-dwelling friend interrupted)</p>
+        </div>
+      </div>
+
+      <div id="journal" class="journal" hidden role="dialog" aria-label="Journal">
+        <div class="jcard">
+          <div class="jhead"><h2>Journal</h2><button id="muteBtn" class="btn small" type="button">Sound: on</button><button id="jclose" class="btn small" type="button">Close <kbd>Q</kbd></button></div>
+          <div id="jbody"></div>
+        </div>
+      </div>
+
+      <div id="worldMap" class="worldmap" hidden role="dialog" aria-label="World Map">
+        <div class="mcard">
+          <div class="jhead"><h2>Map</h2><span id="mpos" class="mpos"></span><button id="mclose" class="btn small" type="button">Close <kbd>M</kbd></button></div>
+          <div id="mbody"></div>
+        </div>
+      </div>
+
+      <div id="pauseMenu" class="pause" hidden role="dialog" aria-label="Paused">
+        <div class="pcard">
+          <h2>Paused</h2>
+          <p class="small">Your progress is saved automatically.</p>
+          <div class="pbtns">
+            <button id="resumeBtn" class="btn primary" type="button">Resume <kbd>Esc</kbd></button>
+            <button id="quitTitleBtn" class="btn" type="button">Quit to title</button>
+            <button id="restartBtn" class="btn" type="button">New game</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="touch" aria-label="Touch controls">
+      <div class="pad">
+        <button type="button" data-key="up" aria-label="Up">▲</button>
+        <button type="button" data-key="left" aria-label="Left">◀</button>
+        <button type="button" data-key="right" aria-label="Right">▶</button>
+        <button type="button" data-key="down" aria-label="Down">▼</button>
+      </div>
+      <div class="ab">
+        <button type="button" data-key="back" aria-label="Back">B</button>
+        <button type="button" data-key="ok" aria-label="Talk or confirm">A</button>
+      </div>
+    </div>
+  </section>
+
+  <p class="keys"><kbd>←↑↓→</kbd>/<kbd>WASD</kbd> walk · <kbd>Z</kbd>/<kbd>E</kbd>/<kbd>Enter</kbd> talk &amp; confirm · <kbd>X</kbd> back · <kbd>Esc</kbd> pause/quit · <kbd>Q</kbd> journal · <kbd>M</kbd> map · <kbd>V</kbd> sound</p>
+</main>
+
+<div id="results" class="results" hidden role="dialog" aria-label="Your reflection"><div id="rbody" class="rbody"></div></div>
+</body>
+</html>
