@@ -99,7 +99,7 @@ function facingEntity() {
 const held = {};
 let dialogKey = null, paused = true;
 const KEY = {ArrowUp:'up', w:'up', W:'up', ArrowDown:'down', s:'down', S:'down', ArrowLeft:'left', a:'left', A:'left', ArrowRight:'right', d:'right', D:'right',
-  z:'ok', Z:'ok', e:'ok', E:'ok', Enter:'ok', ' ':'ok', x:'back', X:'back', Escape:'back', Shift:'back', q:'menu', Q:'menu', Tab:'menu', m:'map', M:'map', v:'mute', V:'mute'};
+  z:'ok', Z:'ok', e:'ok', E:'ok', Enter:'ok', ' ':'ok', x:'back', X:'back', Escape:'back', Shift:'back', q:'menu', Q:'menu', Tab:'menu', m:'map', M:'map', v:'mute', V:'mute', p:'auto', P:'auto'};
 window.addEventListener('keydown', ev => {
   if (ev.target.tagName === 'INPUT' && ev.key !== 'Enter') return;
   const k = KEY[ev.key];
@@ -107,6 +107,7 @@ window.addEventListener('keydown', ev => {
   if (['up', 'down', 'left', 'right', 'ok', 'menu', 'map'].includes(k) || ev.key === ' ') ev.preventDefault();
   audioUnlock();
   if (k === 'mute' && !dialogKey) { toggleMute(); return; }
+  if (k === 'auto' && !dialogKey) { toggleAuto(); return; }
   if (!ev.repeat) press(k);
   if (['up', 'down', 'left', 'right'].includes(k)) held[k] = true;
 });
@@ -190,14 +191,14 @@ function say(raw, who) {
   });
 }
 
-function choose(labels, {cancel = false, prompt = null, dim = []} = {}) {
+function choose(labels, {cancel = false, prompt = null, dim = [], autoPick = -1} = {}) {
   return new Promise(resolve => {
     showBox();
     box.onclick = null;
     $('dmore').hidden = true;
     if (prompt !== null) { textEl.textContent = fill(prompt); box.classList.add('narration'); portrait.hidden = true; nameEl.hidden = true; }
     optsEl.hidden = false; optsEl.innerHTML = '';
-    let sel = 0;
+    let sel = 0, autoTimer = null;
     const btns = labels.map((l, i) => {
       const b = document.createElement('button');
       b.className = 'opt' + (dim[i] ? ' dim' : ''); b.type = 'button';
@@ -208,9 +209,11 @@ function choose(labels, {cancel = false, prompt = null, dim = []} = {}) {
       optsEl.append(b); return b;
     });
     const mark = i => { sel = i; btns.forEach((b, j) => b.classList.toggle('sel', j === i)); btns[i].scrollIntoView({block:'nearest'}); };
-    const finish = i => { blip(660, .06, 'square', .03); dialogKey = null; optsEl.innerHTML = ''; optsEl.hidden = true; resolve(i); };
-    mark(0);
+    const finish = i => { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } blip(660, .06, 'square', .03); dialogKey = null; optsEl.innerHTML = ''; optsEl.hidden = true; resolve(i); };
+    mark(autoPick >= 0 && autoPick < btns.length ? autoPick : 0);
+    if (autoPick >= 0 && autoPick < btns.length) autoTimer = setTimeout(() => finish(autoPick), 550);
     dialogKey = k => {
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
       if (k === 'up') { mark((sel - 1 + btns.length) % btns.length); blip(440, .03); }
       if (k === 'down') { mark((sel + 1) % btns.length); blip(440, .03); }
       if (k === 'ok') finish(sel);
@@ -308,7 +311,16 @@ async function conversation(e) {
     const labels = topics.map(t => (t.ask && t.ask in S.answers ? '✓ ' : '') + t.label).concat(['Goodbye']);
     const dim = topics.map(t => S.seen[key(t)] && !(t.fresh && t.fresh(g))).concat([false]);
     drawPortrait(e);
-    const i = await choose(labels, {cancel:true, prompt:`* ${e.name}${e.title ? ', ' + e.title : ''}. What do you say?`, dim});
+    let autoPick = -1;
+    if (autoMode) {
+      const step = nextAutoStep();
+      if (step && step.npc === e.id && step.topics) {
+        const want = step.topics().find(Boolean);
+        autoPick = want ? topics.findIndex(t => t.label === want) : topics.length;
+        if (autoPick < 0) autoPick = topics.length;
+      }
+    }
+    const i = await choose(labels, {cancel:true, prompt:`* ${e.name}${e.title ? ', ' + e.title : ''}. What do you say?`, dim, autoPick});
     if (i < 0 || i === topics.length) { await say(['See you around.', 'Take care, {name}.', 'Until next time.'][Math.floor(Math.random() * 3)], e); return; }
     const t = topics[i];
     S.seen[key(t)] = true;
@@ -449,6 +461,148 @@ function drawMiniMap(cv) {
 function closeMap() { $('worldMap').hidden = true; paused = false; canvas.focus(); }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[c]));
 
+/* ---------------- Presentation Autopilot ---------------- */
+let autoMode = true, autoPath = null, autoFace = null, autoZoneCache = null, autoTargetCache = null;
+const AUTO_STEPS = [
+  {zone:'square', npc:'gus', need:() => !g.flag('gateFixed') && !g.quest('gate'),
+   topics:() => [!g.quest('gate') ? 'What\'s wrong with the gate?' : null]},
+  {zone:'lab', npc:'quark', need:() => (!g.has('wrench') && !g.flag('gateFixed')) || (g.thoughts() < MIN_THOUGHTS && (!g.answered('quark_origin') || !g.answered('quark_love'))),
+   topics:() => [
+     !g.has('wrench') && !g.flag('gateFixed') ? 'Can I borrow Gus\'s wrench?' : null,
+     g.thoughts() < MIN_THOUGHTS && !g.answered('quark_origin') ? 'Why does anything exist?' : null,
+     g.thoughts() < MIN_THOUGHTS && !g.answered('quark_love') ? 'If we\'re just atoms, does anything matter?' : null,
+   ]},
+  {zone:'square', npc:'gus', need:() => !g.flag('gateFixed') || (g.thoughts() < MIN_THOUGHTS && (!g.answered('gus_map') || !g.answered('gus_belief'))),
+   topics:() => [
+     g.has('wrench') && !g.flag('gateFixed') ? 'Here\'s your wrench!' : null,
+     g.thoughts() < MIN_THOUGHTS && !g.answered('gus_map') ? 'What is truth, Gus?' : null,
+     g.thoughts() < MIN_THOUGHTS && !g.answered('gus_belief') ? 'Do you believe in anything?' : null,
+   ]},
+  {zone:'square', npc:'mira', need:() => g.thoughts() < MIN_THOUGHTS && (!g.answered('mira_storm') || !g.answered('mira_insult')),
+   topics:() => [
+     !g.answered('mira_storm') ? 'How do you stay so calm?' : null,
+     !g.answered('mira_insult') ? 'What if someone is rude to you?' : null,
+   ]},
+  {zone:'square', npc:'dio', need:() => g.thoughts() < MIN_THOUGHTS && (!g.answered('dio_house') || !g.answered('dio_rules')),
+   topics:() => [
+     !g.answered('dio_house') ? 'Would you like a house?' : null,
+     !g.answered('dio_rules') ? 'What do you think of rules?' : null,
+   ]},
+  {zone:'temple', npc:'anselm', need:() => g.thoughts() < MIN_THOUGHTS && !g.answered('anselm_stars'),
+   topics:() => [!g.answered('anselm_stars') ? 'What do you believe?' : null]},
+  {zone:'temple', npc:'kiri', need:() => g.thoughts() < MIN_THOUGHTS && (!g.answered('kiri_self') || !g.answered('kiri_peace')),
+   topics:() => [
+     !g.answered('kiri_self') ? 'Who am I?' : null,
+     !g.answered('kiri_peace') ? 'How do I find peace?' : null,
+   ]},
+  {zone:'lighthouse', npc:'keeper', need:() => !g.flag('ready')},
+  {zone:'lighthouse', npc:'mirror', need:() => g.flag('ready') && !g.flag('finished')},
+];
+function nextAutoStep() { return AUTO_STEPS.find(s => s.need()) || null; }
+function clearAutoPath() { autoPath = null; autoFace = null; autoZoneCache = null; autoTargetCache = null; }
+function toggleAuto() {
+  autoMode = !autoMode; clearAutoPath();
+  const btn = $('autoBtn');
+  if (btn) { btn.innerHTML = `Auto: ${autoMode ? 'ON' : 'OFF'} <kbd>P</kbd>`; btn.classList.toggle('auto-on', autoMode); }
+  toast(autoMode ? 'Auto-walk ON (choices are yours)' : 'Auto-walk paused');
+}
+function nextExitToward(targetZone) {
+  const q = [[S.zone, null]], seen = new Set([S.zone]);
+  while (q.length) {
+    const [z, firstExit] = q.shift();
+    for (const ex of ZONES[z].exits) {
+      if (ex.to === 'lighthouse' && !S.flags.gateFixed) continue;
+      const first = firstExit || ex;
+      if (ex.to === targetZone) return first;
+      if (!seen.has(ex.to)) { seen.add(ex.to); q.push([ex.to, first]); }
+    }
+  }
+  return null;
+}
+function findTilePath(goals, allowExit) {
+  const stx = Math.floor(S.x / 16), sty = Math.floor((S.y - 3) / 16);
+  const key = (x, y) => x + ',' + y;
+  const goalSet = new Set(goals.map(([x, y]) => key(x, y)));
+  if (goalSet.has(key(stx, sty))) return [];
+  const inOtherExit = (x, y) => zone.exits.some(ex => ex !== allowExit && x >= ex.x && x < ex.x + ex.w && y >= ex.y && y < ex.y + ex.h);
+  const q = [[stx, sty]], prev = new Map([[key(stx, sty), null]]);
+  while (q.length) {
+    const [x, y] = q.shift();
+    for (const [dx, dy] of [[0,-1],[0,1],[-1,0],[1,0]]) {
+      const nx = x + dx, ny = y + dy, k = key(nx, ny);
+      if (nx < 0 || nx >= 24 || ny < 0 || ny >= 15 || prev.has(k)) continue;
+      if (blocked(nx * 16 + 8, ny * 16 + 14)) continue;
+      if (!goalSet.has(k) && inOtherExit(nx, ny)) continue;
+      prev.set(k, [x, y]);
+      if (goalSet.has(k)) {
+        const path = [];
+        let cur = [nx, ny];
+        while (cur && !(cur[0] === stx && cur[1] === sty)) { path.push(cur); cur = prev.get(key(cur[0], cur[1])); }
+        return path.reverse();
+      }
+      q.push([nx, ny]);
+    }
+  }
+  return null;
+}
+function npcStandSpots(ent) {
+  const spots = [], seen = new Set();
+  for (let ey = ent.oy; ey < ent.oy + ent.h; ey++) for (let ex = ent.ox; ex < ent.ox + ent.w; ex++) {
+    for (const [dx, dy, dir] of [[0,1,'up'],[0,-1,'down'],[1,0,'left'],[-1,0,'right']]) {
+      const tx = ex + dx, ty = ey + dy, k = tx + ',' + ty;
+      if (tx < 0 || tx >= 24 || ty < 0 || ty >= 15 || seen.has(k)) continue;
+      seen.add(k);
+      if (!blocked(tx * 16 + 8, ty * 16 + 14)) spots.push([tx, ty, dir]);
+    }
+  }
+  return spots;
+}
+function autoStepUpdate(dt) {
+  const step = nextAutoStep();
+  if (!step) { walkT = 0; return; }
+  const targetKey = step.zone + ':' + step.npc;
+  if (autoZoneCache !== S.zone || autoTargetCache !== targetKey || autoPath === null) {
+    autoZoneCache = S.zone; autoTargetCache = targetKey; autoFace = null;
+    if (S.zone !== step.zone) {
+      const ex = nextExitToward(step.zone);
+      if (!ex) { walkT = 0; return; }
+      const goals = [];
+      for (let y = ex.y; y < ex.y + ex.h; y++) for (let x = ex.x; x < ex.x + ex.w; x++) goals.push([x, y]);
+      autoPath = findTilePath(goals, ex) || [];
+    } else {
+      const ent = entities.find(e => e.id === step.npc);
+      if (!ent) { walkT = 0; return; }
+      const spots = npcStandSpots(ent);
+      const path = findTilePath(spots.map(([x, y]) => [x, y]), null);
+      if (!path) { walkT = 0; return; }
+      autoPath = path;
+      const end = path.length ? path[path.length - 1] : [Math.floor(S.x / 16), Math.floor((S.y - 3) / 16)];
+      const match = spots.find(([x, y]) => x === end[0] && y === end[1]);
+      autoFace = match ? match[2] : 'up';
+    }
+  }
+  if (autoPath.length) {
+    const [tx, ty] = autoPath[0];
+    const gx = tx * 16 + 8, gy = ty * 16 + 14;
+    const dx = gx - S.x, dy = gy - S.y, dist = Math.hypot(dx, dy);
+    const v = SPEED * 1.15 * dt / 1000;
+    if (Math.abs(dy) >= Math.abs(dx)) S.dir = dy < 0 ? 'up' : 'down';
+    else S.dir = dx < 0 ? 'left' : 'right';
+    if (dist <= v) { S.x = gx; S.y = gy; autoPath.shift(); }
+    else { S.x += dx / dist * v; S.y += dy / dist * v; }
+    walkT += dt;
+    const ctxTx = Math.floor(S.x / 16), ctxTy = Math.floor((S.y - 3) / 16);
+    for (const ex of zone.exits) if (ctxTx >= ex.x && ctxTx < ex.x + ex.w && ctxTy >= ex.y && ctxTy < ex.y + ex.h) { clearAutoPath(); go(ex.to, ex.at); break; }
+  } else {
+    walkT = 0;
+    if (S.zone === step.zone && autoFace) {
+      S.dir = autoFace;
+      clearAutoPath();
+      interact();
+    }
+  }
+}
+
 /* ---------------- Loop ---------------- */
 let last = performance.now(), fade = 0, fading = null, walkT = 0;
 function update(dt) {
@@ -456,6 +610,7 @@ function update(dt) {
     S.time += dt;
     let dx = (held.right ? 1 : 0) - (held.left ? 1 : 0), dy = (held.down ? 1 : 0) - (held.up ? 1 : 0);
     if (dx || dy) {
+      clearAutoPath();
       if (dy) S.dir = dy < 0 ? 'up' : 'down'; if (dx && !dy) S.dir = dx < 0 ? 'left' : 'right';
       const len = Math.hypot(dx, dy), v = SPEED * dt / 1000;
       const nx = S.x + dx / len * v, ny = S.y + dy / len * v;
@@ -464,6 +619,8 @@ function update(dt) {
       walkT += dt;
       const tx = Math.floor(S.x / 16), ty = Math.floor((S.y - 3) / 16);
       for (const ex of zone.exits) if (tx >= ex.x && tx < ex.x + ex.w && ty >= ex.y && ty < ex.y + ex.h) { go(ex.to, ex.at); break; }
+    } else if (autoMode && S.started) {
+      autoStepUpdate(dt);
     } else walkT = 0;
   }
 }
@@ -647,6 +804,7 @@ $('journalBtn').onclick = () => { if (!busy && $('title').hidden) { if (!$('worl
 $('jclose').onclick = closeJournal;
 $('mapBtn').onclick = () => { if (!busy && $('title').hidden) { if (!$('journal').hidden) closeJournal(); if ($('worldMap').hidden) openMap(); else closeMap(); } };
 $('mclose').onclick = closeMap;
+$('autoBtn').onclick = toggleAuto;
 $('muteBtn').onclick = toggleMute;
 $('muteBtn').textContent = muted ? 'Sound: off' : 'Sound: on';
 

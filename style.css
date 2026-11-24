@@ -26,8 +26,9 @@ kbd { font: inherit; border: 1px solid var(--line); border-bottom-width: 2px; pa
 .hudr { display: flex; gap: 14px; align-items: center; }
 #thoughts { color: var(--muted); }
 #thoughts.ready { color: var(--accent); }
-#journalBtn, #mapBtn { background: none; border: 0; padding: 0; font-size: 22px; }
-#journalBtn:hover, #mapBtn:hover { color: var(--accent); }
+#journalBtn, #mapBtn, #autoBtn { background: none; border: 0; padding: 0; font-size: 22px; }
+#journalBtn:hover, #mapBtn:hover, #autoBtn:hover { color: var(--accent); }
+#autoBtn.auto-on { color: var(--good); }
 
 .screen { position: relative; container-type: inline-size; }
 #world { display: block; width: 100%; aspect-ratio: 384 / 240; image-rendering: pixelated; image-rendering: crisp-edges; outline: none; background: #000; }
@@ -175,7 +176,7 @@ summary { cursor: pointer; color: var(--accent); }
   .wrap { padding: 8px 8px 24px; }
   .top h1 { font-size: 26px; }
   .hud { font-size: 18px; }
-  #journalBtn, #mapBtn { font-size: 18px; }
+  #journalBtn, #mapBtn, #autoBtn { font-size: 18px; }
   .bars li { grid-template-columns: 110px 1fr 40px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
