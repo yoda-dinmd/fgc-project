@@ -62,6 +62,18 @@
           <div id="mbody"></div>
         </div>
       </div>
+
+      <div id="pauseMenu" class="pause" hidden role="dialog" aria-label="Paused">
+        <div class="pcard">
+          <h2>Paused</h2>
+          <p class="small">Your progress is saved automatically.</p>
+          <div class="pbtns">
+            <button id="resumeBtn" class="btn primary" type="button">Resume <kbd>Esc</kbd></button>
+            <button id="quitTitleBtn" class="btn" type="button">Quit to title</button>
+            <button id="restartBtn" class="btn" type="button">New game</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="touch" aria-label="Touch controls">
@@ -78,7 +90,7 @@
     </div>
   </section>
 
-  <p class="keys"><kbd>←↑↓→</kbd>/<kbd>WASD</kbd> walk · <kbd>Z</kbd>/<kbd>E</kbd>/<kbd>Enter</kbd> talk &amp; confirm · <kbd>X</kbd>/<kbd>Esc</kbd> back · <kbd>Q</kbd> journal · <kbd>M</kbd> map · <kbd>P</kbd> auto-walk · <kbd>V</kbd> sound</p>
+  <p class="keys"><kbd>←↑↓→</kbd>/<kbd>WASD</kbd> walk · <kbd>Z</kbd>/<kbd>E</kbd>/<kbd>Enter</kbd> talk &amp; confirm · <kbd>X</kbd> back · <kbd>Esc</kbd> pause/quit · <kbd>Q</kbd> journal · <kbd>M</kbd> map · <kbd>P</kbd> auto-walk · <kbd>V</kbd> sound</p>
 </main>
 
 <div id="results" class="results" hidden role="dialog" aria-label="Your reflection"><div id="rbody" class="rbody"></div></div>
