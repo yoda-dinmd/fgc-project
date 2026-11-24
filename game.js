@@ -99,12 +99,12 @@ function facingEntity() {
 const held = {};
 let dialogKey = null, paused = true;
 const KEY = {ArrowUp:'up', w:'up', W:'up', ArrowDown:'down', s:'down', S:'down', ArrowLeft:'left', a:'left', A:'left', ArrowRight:'right', d:'right', D:'right',
-  z:'ok', Z:'ok', e:'ok', E:'ok', Enter:'ok', ' ':'ok', x:'back', X:'back', Escape:'back', Shift:'back', q:'menu', Q:'menu', Tab:'menu', m:'map', M:'map', v:'mute', V:'mute'};
+  z:'ok', Z:'ok', e:'ok', E:'ok', Enter:'ok', ' ':'ok', x:'back', X:'back', Escape:'esc', Shift:'back', q:'menu', Q:'menu', Tab:'menu', m:'map', M:'map', v:'mute', V:'mute'};
 window.addEventListener('keydown', ev => {
   if (ev.target.tagName === 'INPUT' && ev.key !== 'Enter') return;
   const k = KEY[ev.key];
   if (!k) return;
-  if (['up', 'down', 'left', 'right', 'ok', 'menu', 'map'].includes(k) || ev.key === ' ') ev.preventDefault();
+  if (['up', 'down', 'left', 'right', 'ok', 'menu', 'map', 'esc'].includes(k) || ev.key === ' ') ev.preventDefault();
   audioUnlock();
   if (k === 'mute' && !dialogKey) { toggleMute(); return; }
   if (!ev.repeat) press(k);
@@ -113,11 +113,13 @@ window.addEventListener('keydown', ev => {
 window.addEventListener('keyup', ev => { const k = KEY[ev.key]; if (k) held[k] = false; });
 window.addEventListener('blur', () => { for (const k in held) held[k] = false; });
 function press(k) {
-  if (dialogKey) { dialogKey(k); return; }
-  if (!$('journal').hidden) { if (k === 'menu' || k === 'back') closeJournal(); else if (k === 'map') { closeJournal(); openMap(); } return; }
-  if (!$('worldMap').hidden) { if (k === 'map' || k === 'back') closeMap(); else if (k === 'menu') { closeMap(); openJournal(); } return; }
+  if (dialogKey) { dialogKey(k === 'esc' ? 'back' : k); return; }
+  if (!$('pauseMenu').hidden) { if (k === 'esc' || k === 'back') closePause(); return; }
+  if (!$('journal').hidden) { if (k === 'menu' || k === 'back' || k === 'esc') closeJournal(); else if (k === 'map') { closeJournal(); openMap(); } return; }
+  if (!$('worldMap').hidden) { if (k === 'map' || k === 'back' || k === 'esc') closeMap(); else if (k === 'menu') { closeMap(); openJournal(); } return; }
   if (!$('results').hidden || !$('title').hidden) return;
   if (paused) return;
+  if (k === 'esc') { openPause(); return; }
   if (k === 'ok') interact();
   if (k === 'menu') openJournal();
   if (k === 'map') openMap();
@@ -447,6 +449,19 @@ function drawMiniMap(cv) {
   m.fillStyle = '#ff5252'; m.fillRect(px - 2, py - 2, 4, 4);
 }
 function closeMap() { $('worldMap').hidden = true; paused = false; canvas.focus(); }
+function openPause() {
+  paused = true;
+  for (const k in held) held[k] = false;
+  $('pauseMenu').hidden = false;
+  $('resumeBtn').focus();
+}
+function closePause() { $('pauseMenu').hidden = true; paused = false; canvas.focus(); }
+function quitToTitle() {
+  save();
+  $('pauseMenu').hidden = true;
+  for (const k in held) held[k] = false;
+  title();
+}
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[c]));
 
 /* ---------------- Loop ---------------- */
@@ -647,6 +662,9 @@ $('journalBtn').onclick = () => { if (!busy && $('title').hidden) { if (!$('worl
 $('jclose').onclick = closeJournal;
 $('mapBtn').onclick = () => { if (!busy && $('title').hidden) { if (!$('journal').hidden) closeJournal(); if ($('worldMap').hidden) openMap(); else closeMap(); } };
 $('mclose').onclick = closeMap;
+$('resumeBtn').onclick = closePause;
+$('quitTitleBtn').onclick = quitToTitle;
+$('restartBtn').onclick = () => { if (confirm('Start a new game? Your current progress will be replaced.')) { store.del(SAVE_KEY); location.reload(); } };
 $('muteBtn').onclick = toggleMute;
 $('muteBtn').textContent = muted ? 'Sound: off' : 'Sound: on';
 
