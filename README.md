@@ -1,31 +1,43 @@
-# The Last Light
+# The Examined Life
 
-A classroom worldview adventure in English, Russian, and Romanian. Walk around Ashwick, meet four characters, make eight choices, and decide the fate of the beacon. About 8–15 minutes with discussion.
+A small pixel-art RPG for a philosophy course. You wake up in a strange little town with no memory of who you are or what you believe. You walk around, talk to people, answer their questions and run their errands. At the end, a mirror in the lighthouse shows which worldview you lean towards. It takes about 20–30 minutes.
 
-## Play locally
-Open `index.html` in a modern browser. Keep `style.css`, `story.js`, `locales.js`, and `game.js` beside it. No installation, build, network, fonts, images, or server required. Progress is saved in browser storage when available.
+## Play
+Open `index.html` in a modern browser. There is nothing to install or build. Progress saves automatically in the browser, so you can close the tab and press **Continue** later.
 
-Click the map to focus it, then use WASD / arrow keys and E. The character buttons provide a keyboard and touch alternative. Choose dialogue answers with A–D or the buttons. The journal explains each recorded decision and can be downloaded as text. You may finish without meeting everyone; unexplored topics stay unexplored.
+| Key | Action |
+|---|---|
+| Arrows / WASD | Walk |
+| Z / E / Enter / Space | Talk, confirm, skip text |
+| X / Esc | Back / leave a conversation |
+| Q | Journal (quests, items, progress) |
+| M | Sound on/off |
 
-## Present
-One person controls the game on the projector. Invite the room to vote A/B/C/D, then select the winning response. This version has no networked voting. Results describe group choices, not individual classmates. Discuss one interpretation the audience agrees with and one they would challenge.
+Phones and tablets get an on-screen D-pad and A/B buttons. The pixel font (VT323) comes from Google Fonts; offline, the game falls back to the system monospace font and still works.
 
-## Upload to GitHub Pages
-Upload `index.html`, `style.css`, `story.js`, `locales.js`, and `game.js` to the root of a GitHub repository. In the repository's Pages settings, choose deployment from the main branch and root folder. No build step is needed. Keep a local copy for the presentation.
+## What's in it
+- **8 areas:** Village Square, Laboratory, Temple & Zen Garden, Whispering Forest, the Cave, the Market (Agora), Café & Library, and the Lighthouse.
+- **16 characters, each secretly a worldview.** They are revealed only at the end: Dr. Quark the scientist (naturalism/atheism), Brother Anselm (theism), Rémy in the café (existentialism), Raven the goth kid (nihilism), Mira the gardener (stoicism), Bella the baker (Epicureanism), Mr. Tally the accountant (utilitarianism), Clerk Ought (Kantian ethics), Kiri the meditator (Buddhism), Sylva the forest spirit (pantheism), Gus the mechanic (pragmatism), Inspector Hume (skepticism/agnosticism), Syd and his boulder (absurdism), Rosa the organiser (collectivism), Mr. Penny the merchant (libertarianism) and Dio in his barrel (cynicism).
+- **Undertale-style dialogue:** a typewriter text box with a portrait and a menu of questions you can ask each character.
+- **6 quests that chain between characters:** fix the lighthouse gate (wrench from the lab), the lost prayer book, the case of the missing acorn (croissant → dog → acorn → spirit → detective), the union petition, a black coffee for Rémy, and Raven's dare to enter the cave.
+- **17 hidden secrets:** "I bark, therefore I am", Schrödinger's box, a brain in a jar, Plato's cave, the duck-rabbit, the Ship of Theseus, Zeno's sign, the trolley problem as a toy railway, name easter eggs (try "Socrates" or "Kant"), and more.
+- **The ending:** a radar chart across all 16 worldviews, your top three with short explanations and thinkers to read, every character's secret identity, and a "how was this worked out?" section listing each of your answers and the points it gave.
 
-## Edit
-- `story.js`: translated characters, contexts, questions, answers, and category allocations.
-- `locales.js`: interface text, introduction, methodology, and endings in all three languages.
-- `game.js`: movement, pixel scenery, dialogue, journal, saving, and endings.
-- `style.css`: responsive visual styling.
+## How scoring works
+36 questions are spread across the characters (you need at least 12 to use the mirror). Each answer quietly gives 2 points to one worldview and 1 to a related one. Some worldviews come up more often than others, so a worldview's score is the points you gave it divided by the points that were on offer for it in the questions you answered, plus a small smoothing constant. This is a game for reflection, not a validated psychological test, and the results screen says so.
 
-The artwork is drawn directly in code; there are no generated raster assets. Replace it with your own sprites later if desired.
+## Editing
+- `data.js` holds **all story content**: worldviews, characters, dialogue, questions and their points, items, quests, secrets and maps. The format is documented at the top of the file.
+- `scoring.js` is the hidden scoring maths.
+- `sprites.js` draws the pixel art in code (tiles, characters, animals), so there are no image files.
+- `game.js` is the engine: movement, dialogue box, script runner, journal, saving and the results screen.
+- `style.css` styles the page.
 
-## Interpretation
-This is an educational reflection exercise, not a validated psychological instrument. Results distribute points across six tendencies: evidence and reason, spirituality and tradition, freedom and self-created meaning, human welfare and care, community and shared duties, and scepticism and openness. Each answer gives 2 points to a primary tendency and 1 to a secondary tendency. Percentages are shares of allocated points, rounded to total 100%; they are not probabilities of membership in a philosophy. There are no good/evil points. The method and each answer’s allocation are visible in the journal. Practical actions do not uniquely determine philosophical beliefs. Topics include knowledge, meaning, metaphysics, ethics, agency, and communal obligations. Fictional characters do not represent entire religions or philosophical schools.
+## Tests
+```
+node --test tests/
+```
+These check the maps, spawn points, that every question can be reached, score balance and the scoring maths. They also play the story logic end to end, which proves every quest chain can be finished and the ending is reachable.
 
-## Version 2
-The short introduction plays on a new journey and can be replayed from the page. Every dialogue has an initially expanded context panel. Language can be changed in the header or inside any dialog without losing progress. Downloads use the selected language. Rewritten answers use a new save key, so version 1 answers are not reinterpreted as version 2 choices.
-
-## Checks
-Run `node tests/story.test.cjs` and `node tests/flow.test.cjs`. The flow harness checks logic with a simulated DOM; it is not a substitute for browser visual testing.
+## Publish on GitHub Pages
+Push the repository, then in Settings → Pages choose "Deploy from a branch", `main`, root folder.
