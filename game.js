@@ -4,7 +4,7 @@ const $ = id => document.getElementById(id);
 const canvas = $('world'), ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 const art = makeArt(ctx);
-const W = 384, H = 240, SAVE_KEY = 'examined-life-v1', SPEED = 74;
+const W = 384, H = 240, SAVE_KEY = 'examined-life-v1', SPEED = 92;
 const PLAYER_LOOK = {skin:'#f0c8a0', hair:'#5a3d2b', style:'short', top:'#4f7cc4', bottom:'#3a3550', extras:['belt:#f2d14b']};
 
 /* ---------------- State ---------------- */
@@ -462,7 +462,7 @@ function closeMap() { $('worldMap').hidden = true; paused = false; canvas.focus(
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[c]));
 
 /* ---------------- Presentation Autopilot ---------------- */
-let autoMode = true, autoPath = null, autoFace = null, autoZoneCache = null, autoTargetCache = null;
+let autoMode = false, autoPath = null, autoFace = null, autoZoneCache = null, autoTargetCache = null;
 const AUTO_STEPS = [
   {zone:'square', npc:'gus', need:() => !g.flag('gateFixed') && !g.quest('gate'),
    topics:() => [!g.quest('gate') ? 'What\'s wrong with the gate?' : null]},
