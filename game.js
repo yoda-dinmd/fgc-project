@@ -99,12 +99,12 @@ function facingEntity() {
 const held = {};
 let dialogKey = null, paused = true;
 const KEY = {ArrowUp:'up', w:'up', W:'up', ArrowDown:'down', s:'down', S:'down', ArrowLeft:'left', a:'left', A:'left', ArrowRight:'right', d:'right', D:'right',
-  z:'ok', Z:'ok', e:'ok', E:'ok', Enter:'ok', ' ':'ok', x:'back', X:'back', Escape:'back', Shift:'back', q:'menu', Q:'menu', Tab:'menu', m:'mute', M:'mute'};
+  z:'ok', Z:'ok', e:'ok', E:'ok', Enter:'ok', ' ':'ok', x:'back', X:'back', Escape:'back', Shift:'back', q:'menu', Q:'menu', Tab:'menu', m:'map', M:'map', v:'mute', V:'mute'};
 window.addEventListener('keydown', ev => {
   if (ev.target.tagName === 'INPUT' && ev.key !== 'Enter') return;
   const k = KEY[ev.key];
   if (!k) return;
-  if (['up', 'down', 'left', 'right', 'ok', 'menu'].includes(k) || ev.key === ' ') ev.preventDefault();
+  if (['up', 'down', 'left', 'right', 'ok', 'menu', 'map'].includes(k) || ev.key === ' ') ev.preventDefault();
   audioUnlock();
   if (k === 'mute' && !dialogKey) { toggleMute(); return; }
   if (!ev.repeat) press(k);
@@ -114,11 +114,13 @@ window.addEventListener('keyup', ev => { const k = KEY[ev.key]; if (k) held[k] =
 window.addEventListener('blur', () => { for (const k in held) held[k] = false; });
 function press(k) {
   if (dialogKey) { dialogKey(k); return; }
-  if (!$('journal').hidden) { if (k === 'menu' || k === 'back') closeJournal(); return; }
+  if (!$('journal').hidden) { if (k === 'menu' || k === 'back') closeJournal(); else if (k === 'map') { closeJournal(); openMap(); } return; }
+  if (!$('worldMap').hidden) { if (k === 'map' || k === 'back') closeMap(); else if (k === 'menu') { closeMap(); openJournal(); } return; }
   if (!$('results').hidden || !$('title').hidden) return;
   if (paused) return;
   if (k === 'ok') interact();
   if (k === 'menu') openJournal();
+  if (k === 'map') openMap();
 }
 
 /* ---------------- Audio (tiny blips) ---------------- */
@@ -254,8 +256,14 @@ async function run(steps, who) {
       const i = await choose(q.o.map(o => o.t));
       S.answers[step.ask] = i;
       save();
-      const n = g.thoughts();
-      toast(n === MIN_THOUGHTS ? '✧ The mirror in the lighthouse is ready for you.' : `✧ A thought settles. (${n})`);
+      const c = thoughtCounts();
+      const n = c.got;
+      const msg = c.townGot === c.townTotal && c.lhGot === 0
+        ? `✧ All ${c.townTotal} town thoughts found! The final ${c.lhTotal} are in the lighthouse.`
+        : n === MIN_THOUGHTS
+          ? '✧ The mirror in the lighthouse is ready for you.'
+          : `✧ A thought settles. (${n})`;
+      toast(msg);
       jingle([523, 659]);
       hud();
       if (q.o[i].r) await run(q.o[i].r, asker);
@@ -298,7 +306,7 @@ async function conversation(e) {
     const topics = e.topics.filter(t => !t.when || t.when(g));
     const key = t => e.id + ':' + t.label;
     const labels = topics.map(t => (t.ask && t.ask in S.answers ? '✓ ' : '') + t.label).concat(['Goodbye']);
-    const dim = topics.map(t => S.seen[key(t)]).concat([false]);
+    const dim = topics.map(t => S.seen[key(t)] && !(t.fresh && t.fresh(g))).concat([false]);
     drawPortrait(e);
     const i = await choose(labels, {cancel:true, prompt:`* ${e.name}${e.title ? ', ' + e.title : ''}. What do you say?`, dim});
     if (i < 0 || i === topics.length) { await say(['See you around.', 'Take care, {name}.', 'Until next time.'][Math.floor(Math.random() * 3)], e); return; }
@@ -317,14 +325,27 @@ function toast(msg) {
   const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
   $('toasts').append(el); setTimeout(() => el.classList.add('out'), 2600); setTimeout(() => el.remove(), 3100);
 }
+function thoughtCounts() {
+  const all = Object.entries(QUESTIONS);
+  const lh = all.filter(([, q]) => q.by === 'keeper');
+  const town = all.filter(([, q]) => q.by !== 'keeper');
+  const lhGot = lh.filter(([id]) => id in S.answers).length;
+  const townGot = town.filter(([id]) => id in S.answers).length;
+  return {total:all.length, townTotal:town.length, lhTotal:lh.length, got:townGot + lhGot, townGot, lhGot};
+}
 function hud() {
-  const n = g.thoughts();
+  const c = thoughtCounts(), n = c.got;
   $('thoughts').textContent = `✧ ${n} thought${n === 1 ? '' : 's'}`;
-  $('thoughts').title = n >= MIN_THOUGHTS ? 'Enough for the mirror. More makes it clearer.' : `The mirror needs ${MIN_THOUGHTS}.`;
+  $('thoughts').title = c.townGot === c.townTotal && c.lhGot < c.lhTotal
+    ? `All ${c.townTotal} town thoughts found! The final ${c.lhTotal} thoughts are in the lighthouse.`
+    : n >= MIN_THOUGHTS
+      ? `Enough for the mirror (${c.townGot}/${c.townTotal} in town, ${c.lhGot}/${c.lhTotal} in lighthouse).`
+      : `The mirror needs ${MIN_THOUGHTS} (${c.townGot}/${c.townTotal} in town; final ${c.lhTotal} are in the lighthouse).`;
   $('thoughts').classList.toggle('ready', n >= MIN_THOUGHTS);
 }
 function openJournal() {
   paused = true;
+  const c = thoughtCounts();
   const q = Object.entries(QUESTS).filter(([id]) => S.quests[id] || id === 'mirror');
   const quests = q.map(([id, d]) => {
     const done = S.quests[id] === 'done' || (id === 'mirror' && S.flags.finished);
@@ -332,11 +353,17 @@ function openJournal() {
   }).join('');
   const items = S.items.length ? S.items.map(i => `<li><b>${ITEMS[i].name}</b><span>${esc(ITEMS[i].desc)}</span></li>`).join('') : '<li class="muted">Your pockets are empty. Philosophically, so is everything.</li>';
   const met = Object.keys(S.met).length, people = Object.values(NPCS).filter(n => n.topics).length;
+  const lhNote = c.townGot === c.townTotal && c.lhGot < c.lhTotal
+    ? `<p class="ready-note">✧ You have found all ${c.townTotal} thoughts in town! The final ${c.lhTotal} thoughts are with the Keeper in the lighthouse.</p>`
+    : c.lhGot < c.lhTotal
+      ? `<p class="muted"><small>Note: the final ${c.lhTotal} of ${c.total} thoughts are asked by the Keeper inside the lighthouse.</small></p>`
+      : '';
   $('jbody').innerHTML = `
     <section><h3>Quests</h3><ul class="jlist">${quests}</ul></section>
     <section><h3>Pockets</h3><ul class="jlist">${items}</ul></section>
     <section class="stats"><h3>Progress</h3>
-      <p>✧ Thoughts: <b>${g.thoughts()}</b> <small>(the mirror needs ${MIN_THOUGHTS}; there are ${Object.keys(QUESTIONS).length})</small></p>
+      <p>✧ Thoughts: <b>${c.got}/${c.total}</b> <small>(${c.townGot}/${c.townTotal} in town · ${c.lhGot}/${c.lhTotal} in the lighthouse · mirror needs ${MIN_THOUGHTS})</small></p>
+      ${lhNote}
       <p>People met: <b>${met}/${people}</b> · Secrets: <b>${Object.keys(S.eggs).length}/${Object.keys(EGGS).length}</b></p>
     </section>
     ${S.flags.finished ? '<button id="jresults" class="btn primary">See your reflection again</button>' : ''}`;
@@ -344,6 +371,82 @@ function openJournal() {
   $('journal').hidden = false; $('jclose').focus();
 }
 function closeJournal() { $('journal').hidden = true; paused = false; canvas.focus(); }
+
+const MAP_LAYOUT = [
+  {id:'cave', note:'via Forest NW'},
+  {id:'temple', note:'north of Square'},
+  {id:'lighthouse', note:'NE gate · final 3 ✧'},
+  {id:'forest', note:'west of Square'},
+  {id:'square', note:'town centre'},
+  {id:'market', note:'east of Square'},
+  {id:'lab', note:'Square NW door'},
+  {id:'cafe', note:'south of Square'},
+];
+const CHAR_KINDS = new Set(['human', 'barrel', 'spirit', 'dog']);
+function npcThoughts(id) {
+  const qs = Object.entries(QUESTIONS).filter(([, q]) => q.by === id);
+  return {total:qs.length, done:qs.filter(([qid]) => qid in S.answers).length};
+}
+function openMap() {
+  paused = true;
+  const c = thoughtCounts();
+  $('mpos').textContent = `You are in: ${ZONES[S.zone].name}`;
+  const cards = MAP_LAYOUT.map(slot => {
+    const z = ZONES[slot.id], here = slot.id === S.zone;
+    const locked = slot.id === 'lighthouse' && !S.flags.gateFixed;
+    const chars = Object.entries(NPCS).filter(([, n]) => n.zone === slot.id && CHAR_KINDS.has(n.kind));
+    const list = chars.map(([id, n]) => {
+      const t = npcThoughts(id);
+      const cls = t.total === 0 ? '' : t.done < t.total ? 'more' : 'done';
+      const badge = t.total === 0 ? '·' : t.done < t.total ? `✧ ${t.done}/${t.total}` : `✓ ${t.done}/${t.total}`;
+      return `<li class="mnpc ${cls}"><span>${esc(n.name)}</span><span class="ms">${badge}</span></li>`;
+    }).join('');
+    const tag = here ? '● YOU' : locked ? 'locked' : slot.note;
+    return `<div class="mzone${here ? ' here' : ''}${locked ? ' locked' : ''}"><div class="mzh"><b>${esc(z.name)}</b><span class="mtag">${tag}</span></div><ul class="mnpcs">${list}</ul></div>`;
+  }).join('');
+  const mini = `<div class="mmini"><div class="mzh"><b>${esc(ZONES[S.zone].name)}</b><span class="mtag">live map</span></div><canvas id="miniMap" width="144" height="90" aria-label="Current area map"></canvas></div>`;
+  const lhBanner = c.townGot === c.townTotal && c.lhGot < c.lhTotal
+    ? `<p class="ready-note">✧ All ${c.townTotal} town thoughts found! Head to the Lighthouse (NE gate) for the final ${c.lhTotal} thoughts.</p>` : '';
+  $('mbody').innerHTML = `
+    <div class="mgrid">${cards}${mini}</div>
+    ${lhBanner}
+    <div class="mlegend">
+      <span><b class="lg-you">●</b> You</span>
+      <span><b class="lg-more">✧</b> Thoughts remaining</span>
+      <span><b class="lg-done">✓</b> All thoughts heard</span>
+      <span><b>·</b> Townsperson</span>
+      <span>Final ${c.lhTotal} thoughts are in the Lighthouse</span>
+    </div>`;
+  drawMiniMap($('miniMap'));
+  $('worldMap').hidden = false; $('mclose').focus();
+}
+function drawMiniMap(cv) {
+  const m = cv.getContext('2d'), T = 6;
+  m.fillStyle = '#181524'; m.fillRect(0, 0, cv.width, cv.height);
+  for (let ty = 0; ty < 15; ty++) for (let tx = 0; tx < 24; tx++) {
+    const ch = map[ty][tx];
+    if (ch === 'G') m.fillStyle = S.flags.gateFixed ? '#4b7a52' : '#9e3b3b';
+    else if (ch === '~' || ch === 'F') m.fillStyle = '#2d5a88';
+    else if (SOLID.has(ch)) m.fillStyle = '#2f2b40';
+    else if (ch === ',' || ch === 'R') m.fillStyle = '#474157';
+    else m.fillStyle = '#222634';
+    m.fillRect(tx * T, ty * T, T, T);
+  }
+  for (const ex of zone.exits) {
+    m.fillStyle = '#5bb88a55';
+    m.fillRect(ex.x * T, ex.y * T, ex.w * T, ex.h * T);
+  }
+  for (const e of entities) {
+    if (!CHAR_KINDS.has(e.kind)) continue;
+    const t = npcThoughts(e.id);
+    m.fillStyle = t.total === 0 ? '#a9a3b8' : t.done < t.total ? '#f2c14e' : '#8fd3a8';
+    m.fillRect(e.x * T + 1, e.y * T + 1, T - 2, T - 2);
+  }
+  const px = Math.round(S.x / 16 * T), py = Math.round((S.y - 4) / 16 * T);
+  m.fillStyle = '#ffffff'; m.fillRect(px - 3, py - 3, 6, 6);
+  m.fillStyle = '#ff5252'; m.fillRect(px - 2, py - 2, 4, 4);
+}
+function closeMap() { $('worldMap').hidden = true; paused = false; canvas.focus(); }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[c]));
 
 /* ---------------- Loop ---------------- */
@@ -540,8 +643,10 @@ document.querySelectorAll('[data-key]').forEach(b => {
   const up = () => { if (k in held) held[k] = false; b.classList.remove('on'); };
   b.addEventListener('pointerdown', down); b.addEventListener('pointerup', up); b.addEventListener('pointerleave', up); b.addEventListener('pointercancel', up);
 });
-$('journalBtn').onclick = () => { if (!busy && $('title').hidden) openJournal(); };
+$('journalBtn').onclick = () => { if (!busy && $('title').hidden) { if (!$('worldMap').hidden) closeMap(); openJournal(); } };
 $('jclose').onclick = closeJournal;
+$('mapBtn').onclick = () => { if (!busy && $('title').hidden) { if (!$('journal').hidden) closeJournal(); if ($('worldMap').hidden) openMap(); else closeMap(); } };
+$('mclose').onclick = closeMap;
 $('muteBtn').onclick = toggleMute;
 $('muteBtn').textContent = muted ? 'Sound: off' : 'Sound: on';
 

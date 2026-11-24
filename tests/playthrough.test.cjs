@@ -61,3 +61,15 @@ test('the keeper refuses with too few thoughts', () => {
   const steps = D.NPCS.keeper.talk(g);
   assert.ok(!JSON.stringify(steps).includes('keeper_good'));
 });
+
+test('gus shows a fresh topic with wrench and un-dims gate topic when thoughts suffice', () => {
+  const gus = D.NPCS.gus;
+  const gNoWrench = {flag: () => false, has: () => false, thoughts: () => D.MIN_THOUGHTS};
+  const gateTopic = gus.topics.find(t => t.label.includes('gate'));
+  assert.ok(gateTopic.when(gNoWrench));
+  assert.ok(gateTopic.fresh(gNoWrench));
+  const gWithWrench = {flag: () => false, has: i => i === 'wrench', thoughts: () => 1};
+  const wrenchTopic = gus.topics.find(t => t.label.includes('wrench'));
+  assert.ok(wrenchTopic && wrenchTopic.when(gWithWrench));
+  assert.ok(!gateTopic.when(gWithWrench));
+});

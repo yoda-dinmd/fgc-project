@@ -393,17 +393,18 @@ const NPCS = {
     hello:['Name\'s Gus. I fix things. Theories? Mostly no. Gates? Mostly yes.'],
     hi:['Gus here. Still fixing. Still not theorising.', 'Hey, {name}. Need something tightened? Bolts, arguments?'],
     topics:[
-      {label:'What\'s wrong with the gate?', when:g => !g.flag('gateFixed'), script:g => g.has('wrench') ? [
+      {label:'What\'s wrong with the gate?', when:g => !g.flag('gateFixed') && !g.has('wrench'), fresh:g => g.thoughts() >= MIN_THOUGHTS, script:[
+          'Rusted hinge. The path behind it goes up to the old lighthouse.',
+          'They say the mirror up there shows you who you really are. Never needed it. I know who I am. I\'m Gus.',
+          'I\'d fix the gate, but my good wrench walked off. Doc Quark borrowed it for an "experiment". The lab is the building with the door, top-left.',
+          {quest:'gate'},
+        ]},
+      {label:'Here\'s your wrench!', when:g => !g.flag('gateFixed') && g.has('wrench'), script:[
           'Is that my wrench? Hand it over.', {take:'wrench'},
           '* Clank. Clonk. Skreeeeek.',
           'There. Does it open? Then it\'s fixed. That\'s all "fixed" ever means.',
           {set:'gateFixed'}, {done:'gate'},
           '* The lighthouse gate is open. A path winds up the hill.',
-        ] : [
-          'Rusted hinge. The path behind it goes up to the old lighthouse.',
-          'They say the mirror up there shows you who you really are. Never needed it. I know who I am. I\'m Gus.',
-          'I\'d fix the gate, but my good wrench walked off. Doc Quark borrowed it for an "experiment". The lab is the building with the door, top-left.',
-          {quest:'gate'},
         ]},
       {label:'What is truth, Gus?', script:['Truth? If an idea works when you use it, I call it true. If it doesn\'t, it\'s decoration.'], ask:'gus_map'},
       {label:'Fixed anything weird lately?', script:['A philosopher\'s argument. Perfectly valid, went absolutely nowhere. Like a car on blocks.', 'Also a stopped clock. Right twice a day. Customer was thrilled. Who am I to argue?']},
@@ -822,7 +823,7 @@ const INTRO = [
   '* You don\'t remember what you believe, either.',
   '* To the north-east, an old lighthouse stands dark. People say its mirror shows you who you really are...',
   '* ...but only to someone who has really talked with people.',
-  '* (Arrows / WASD to walk. Z, E or Enter to talk. X or Esc to go back. Q for your journal.)',
+  '* (Arrows / WASD to walk. Z, E or Enter to talk. X or Esc to go back. Q for your journal, M for the map.)',
 ];
 
 if (typeof module !== 'undefined') module.exports = {WORLDVIEWS, QUESTIONS, ITEMS, QUESTS, EGGS, NPCS, ZONES, INTRO, NAME_EGGS, MIN_THOUGHTS};

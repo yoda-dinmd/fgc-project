@@ -26,8 +26,8 @@ kbd { font: inherit; border: 1px solid var(--line); border-bottom-width: 2px; pa
 .hudr { display: flex; gap: 14px; align-items: center; }
 #thoughts { color: var(--muted); }
 #thoughts.ready { color: var(--accent); }
-#journalBtn { background: none; border: 0; padding: 0; font-size: 22px; }
-#journalBtn:hover { color: var(--accent); }
+#journalBtn, #mapBtn { background: none; border: 0; padding: 0; font-size: 22px; }
+#journalBtn:hover, #mapBtn:hover { color: var(--accent); }
 
 .screen { position: relative; container-type: inline-size; }
 #world { display: block; width: 100%; aspect-ratio: 384 / 240; image-rendering: pixelated; image-rendering: crisp-edges; outline: none; background: #000; }
@@ -65,7 +65,7 @@ kbd { font: inherit; border: 1px solid var(--line); border-bottom-width: 2px; pa
 @keyframes tin { from { transform: translateY(-8px); opacity: 0; } }
 
 /* ----- Overlays ----- */
-.title, .journal { position: absolute; inset: 0; display: grid; place-items: center; background: #0b0912e6; padding: 3cqw; }
+.title, .journal, .worldmap { position: absolute; inset: 0; display: grid; place-items: center; background: #0b0912e6; padding: 3cqw; }
 .tcard { text-align: center; max-width: 560px; }
 .tcard h2 { font-size: clamp(36px, 8cqw, 72px); margin: 0 0 6px; font-weight: normal; color: var(--accent); letter-spacing: 2px; text-shadow: 4px 4px 0 #000; }
 .tcard p { margin: 0 0 14px; font-size: clamp(17px, 2.8cqw, 24px); }
@@ -89,7 +89,33 @@ kbd { font: inherit; border: 1px solid var(--line); border-bottom-width: 2px; pa
 .jcard .stats p { margin: 2px 0; }
 .jcard .stats small { color: var(--muted); }
 .muted { color: var(--muted); }
+.ready-note { margin: 8px 0 0; padding: 6px 10px; border: 2px solid var(--accent); background: #f2c14e18; color: var(--accent); }
 #jresults { margin-top: 12px; }
+
+/* ----- World Map ----- */
+.mcard { width: min(100%, 820px); max-height: 100%; overflow-y: auto; background: #000; border: 4px solid #fff; padding: 10px 14px; font-size: clamp(14px, 2.1cqw, 19px); }
+.mpos { color: var(--muted); font-size: .9em; }
+.mgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+@media (max-width: 600px) { .mgrid { grid-template-columns: 1fr; } }
+.mzone { border: 2px solid var(--line); padding: 6px 8px; background: #12101c; display: flex; flex-direction: column; gap: 3px; }
+.mzone.here { border-color: var(--accent); background: #221d12; box-shadow: inset 0 0 0 1px var(--accent); }
+.mzone.locked { border-style: dashed; }
+.mzh { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; color: var(--ink); font-size: 1.05em; }
+.mzone.here .mzh { color: var(--accent); }
+.mtag { font-size: .78em; color: var(--muted); }
+.mzone.here .mtag { color: var(--accent); }
+.mnpcs { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.mnpc { display: flex; justify-content: space-between; gap: 6px; color: var(--muted); line-height: 1.1; }
+.mnpc.more { color: var(--ink); }
+.mnpc.more .ms { color: var(--accent); }
+.mnpc.done .ms { color: var(--good); }
+.mmini { border: 2px solid var(--line); padding: 6px 8px; background: #0c0a14; display: flex; flex-direction: column; gap: 4px; }
+.mmini canvas { width: 100%; height: auto; aspect-ratio: 24 / 15; image-rendering: pixelated; border: 1px solid var(--line); background: #090810; display: block; }
+.mlegend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; color: var(--muted); font-size: .88em; }
+.mlegend b { font-weight: normal; }
+.mlegend .lg-you { color: #ff6b6b; }
+.mlegend .lg-more { color: var(--accent); }
+.mlegend .lg-done { color: var(--good); }
 
 /* ----- Touch controls (shown on touch devices) ----- */
 .touch { display: none; justify-content: space-between; align-items: center; padding: 12px 18px; border-top: 4px solid var(--ink); background: #000; touch-action: none; user-select: none; }
@@ -149,7 +175,7 @@ summary { cursor: pointer; color: var(--accent); }
   .wrap { padding: 8px 8px 24px; }
   .top h1 { font-size: 26px; }
   .hud { font-size: 18px; }
-  #journalBtn { font-size: 18px; }
+  #journalBtn, #mapBtn { font-size: 18px; }
   .bars li { grid-template-columns: 110px 1fr 40px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

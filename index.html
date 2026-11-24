@@ -22,7 +22,7 @@
   <section class="frame" aria-label="Game">
     <div class="hud">
       <span id="zoneName">Village Square</span>
-      <span class="hudr"><span id="thoughts">✧ 0 thoughts</span><button id="journalBtn" type="button">Journal <kbd>Q</kbd></button></span>
+      <span class="hudr"><span id="thoughts">✧ 0 thoughts</span><button id="mapBtn" type="button">Map <kbd>M</kbd></button><button id="journalBtn" type="button">Journal <kbd>Q</kbd></button></span>
     </div>
     <div class="screen">
       <canvas id="world" width="384" height="240" tabindex="0" aria-label="Game world. Use arrow keys to walk and Z to talk."></canvas>
@@ -55,6 +55,13 @@
           <div id="jbody"></div>
         </div>
       </div>
+
+      <div id="worldMap" class="worldmap" hidden role="dialog" aria-label="World Map">
+        <div class="mcard">
+          <div class="jhead"><h2>Map</h2><span id="mpos" class="mpos"></span><button id="mclose" class="btn small" type="button">Close <kbd>M</kbd></button></div>
+          <div id="mbody"></div>
+        </div>
+      </div>
     </div>
 
     <div class="touch" aria-label="Touch controls">
@@ -71,7 +78,7 @@
     </div>
   </section>
 
-  <p class="keys"><kbd>←↑↓→</kbd>/<kbd>WASD</kbd> walk · <kbd>Z</kbd>/<kbd>E</kbd>/<kbd>Enter</kbd> talk &amp; confirm · <kbd>X</kbd>/<kbd>Esc</kbd> back · <kbd>Q</kbd> journal · <kbd>M</kbd> sound</p>
+  <p class="keys"><kbd>←↑↓→</kbd>/<kbd>WASD</kbd> walk · <kbd>Z</kbd>/<kbd>E</kbd>/<kbd>Enter</kbd> talk &amp; confirm · <kbd>X</kbd>/<kbd>Esc</kbd> back · <kbd>Q</kbd> journal · <kbd>M</kbd> map · <kbd>V</kbd> sound</p>
 </main>
 
 <div id="results" class="results" hidden role="dialog" aria-label="Your reflection"><div id="rbody" class="rbody"></div></div>
