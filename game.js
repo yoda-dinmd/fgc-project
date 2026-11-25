@@ -193,14 +193,14 @@ function say(raw, who) {
   });
 }
 
-function choose(labels, {cancel = false, prompt = null, dim = [], autoPick = -1} = {}) {
+function choose(labels, {cancel = false, prompt = null, dim = [], initSel = 0} = {}) {
   return new Promise(resolve => {
     showBox();
     box.onclick = null;
     $('dmore').hidden = true;
     if (prompt !== null) { textEl.textContent = fill(prompt); box.classList.add('narration'); portrait.hidden = true; nameEl.hidden = true; }
     optsEl.hidden = false; optsEl.innerHTML = '';
-    let sel = 0, autoTimer = null;
+    let sel = 0;
     const btns = labels.map((l, i) => {
       const b = document.createElement('button');
       b.className = 'opt' + (dim[i] ? ' dim' : ''); b.type = 'button';
@@ -211,11 +211,9 @@ function choose(labels, {cancel = false, prompt = null, dim = [], autoPick = -1}
       optsEl.append(b); return b;
     });
     const mark = i => { sel = i; btns.forEach((b, j) => b.classList.toggle('sel', j === i)); btns[i].scrollIntoView({block:'nearest'}); };
-    const finish = i => { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } blip(660, .06, 'square', .03); dialogKey = null; optsEl.innerHTML = ''; optsEl.hidden = true; resolve(i); };
-    mark(autoPick >= 0 && autoPick < btns.length ? autoPick : 0);
-    if (autoPick >= 0 && autoPick < btns.length) autoTimer = setTimeout(() => finish(autoPick), 550);
+    const finish = i => { blip(660, .06, 'square', .03); dialogKey = null; optsEl.innerHTML = ''; optsEl.hidden = true; resolve(i); };
+    mark(initSel >= 0 && initSel < btns.length ? initSel : 0);
     dialogKey = k => {
-      if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
       if (k === 'up') { mark((sel - 1 + btns.length) % btns.length); blip(440, .03); }
       if (k === 'down') { mark((sel + 1) % btns.length); blip(440, .03); }
       if (k === 'ok') finish(sel);
@@ -313,16 +311,16 @@ async function conversation(e) {
     const labels = topics.map(t => (t.ask && t.ask in S.answers ? '✓ ' : '') + t.label).concat(['Goodbye']);
     const dim = topics.map(t => S.seen[key(t)] && !(t.fresh && t.fresh(g))).concat([false]);
     drawPortrait(e);
-    let autoPick = -1;
+    let initSel = 0;
     if (autoMode) {
       const step = nextAutoStep();
       if (step && step.npc === e.id && step.topics) {
         const want = step.topics().find(Boolean);
-        autoPick = want ? topics.findIndex(t => t.label === want) : topics.length;
-        if (autoPick < 0) autoPick = topics.length;
+        initSel = want ? topics.findIndex(t => t.label === want) : topics.length;
+        if (initSel < 0) initSel = topics.length;
       }
     }
-    const i = await choose(labels, {cancel:true, prompt:`* ${e.name}${e.title ? ', ' + e.title : ''}. What do you say?`, dim, autoPick});
+    const i = await choose(labels, {cancel:true, prompt:`* ${e.name}${e.title ? ', ' + e.title : ''}. What do you say?`, dim, initSel});
     if (i < 0 || i === topics.length) { await say(['See you around.', 'Take care, {name}.', 'Until next time.'][Math.floor(Math.random() * 3)], e); return; }
     const t = topics[i];
     S.seen[key(t)] = true;
